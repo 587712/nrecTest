@@ -1,100 +1,124 @@
 package com.example.demo.classes.lightsout;
 
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 @Component
 public class Board {
-	
-	private boolean[][] tiles;
-	private int stage;
-	private ArrayList<Stage> stages;
-	
-	public Board() {
-		tiles = new boolean[0][0];
-		stage = 0;
 
-		stages = new ArrayList<>();
+    private boolean[][] tiles;
+    private int stage;
+    private ArrayList<Stage> stages = new ArrayList<>();
 
-		try(InputStream input = Board.class.getResourceAsStream("/static/lightsoutStages.json")) {
-			StringBuilder jsonText = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-            	String line;
-            	while ((line = reader.readLine()) != null) {
-            		jsonText.append(line);
-            	}
-            	JSONObject jsonObject = new JSONObject(jsonText.toString());
-            	JSONArray jsonArray = jsonObject.optJSONArray("data");
-            	Gson gson = new Gson();
-        		Type listType = new TypeToken<Stage>() {}.getType();
-        		for(Object o : jsonArray) {
-					stages.add(gson.fromJson(o.toString(), listType));
-				}
+    public Board() {
+        tiles = new boolean[0][0];
+        stage = 0;
+    }
+
+    @PostConstruct
+    private void loadStages() {
+        try (InputStream input = Board.class.getResourceAsStream("/static/lightsoutStages.json")) {
+            if (input == null) {
+                // resource not found — keep stages empty and avoid throwing in ctor/postconstruct
+                System.err.println("lightsoutStages.json not found on classpath (/static/lightsoutStages.json)");
+                return;
             }
-		} catch (Exception e) {e.printStackTrace();}
-		
-		initStage();
-		
-	}
-	
-	public boolean[][] getTiles() {
-		return tiles;
-	}
-	
-	private void toggleTile(int row, int col) {
-		tiles[row][col] = !tiles[row][col];
-	}
-	
-	public void nextStage() {
-		levelUp();
-		initStage();
-	}
-	
-	private void initStage() {
-		boolean[][] temp = stages.get(stage).getTiles();
-		tiles = new boolean[temp.length][temp[0].length];
-		for(int i = 0; i < temp.length; i++) {
-			for(int j = 0; j < temp[i].length; j++) {
-				tiles[i][j] = temp[i][j];
-			}
-		}
-	}
-	
-	private void levelUp() {
-		stage++;
-		stage = stage % stages.size();
-	}
-	
-	public void clicked(int id) {
-		int col = id % tiles.length;
-		int row = id / tiles[0].length;
-		for(int i = -1; i <= 1; i++) {
-			for(int j = -1; j <= 1; j++) {
-				try {
-					toggleTile(row + i, col + j);
-				} catch(Exception e) {}
-			}
-		}
-	}
-	
-	public boolean checkWin() {
-		for(boolean[] b1 : tiles) {
-			for(boolean b2 : b1) {
-				if(!b2) return false;
-			}
-		}
-		return true;
-	}
-	
+
+            String jsonText = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+
+            Gson gson = new Gson();
+            JsonObject root = JsonParser.parseString(jsonText).getAsJsonObject();
+            JsonArray data = root.getAsJsonArray("data");
+            if (data != null) {
+                for (JsonElement el : data) {
+                    Stage s = gson.fromJson(el, Stage.class);
+                    if (s != null) stages.add(s);
+                }
+            }
+        } catch (Exception e) {
+            // log and continue — do not fail bean instantiation
+            e.printStackTrace();
+        }
+
+        if (!stages.isEmpty()) {
+            initStage();
+        }
+    }
+
+    public boolean[][] getTiles() {
+        return tiles;
+    }
+
+    private void toggleTile(int row, int col) {
+        tiles[row][col] = !tiles[row][col];
+    }
+
+    public void nextStage() {
+        levelUp();
+        initStage();
+    }
+
+    private void initStage() {
+        if (stages.isEmpty()) {
+            tiles = new boolean[0][0];
+            return;
+        }
+
+        boolean[][] temp = stages.get(stage).getTiles();
+        if (temp == null || temp.length == 0 || temp[0].length == 0) {
+            tiles = new boolean[0][0];
+            return;
+        }
+
+        tiles = new boolean[temp.length][temp[0].length];
+        for (int i = 0; i < temp.length; i++) {
+            for (int j = 0; j < temp[i].length; j++) {
+                tiles[i][j] = temp[i][j];
+            }
+        }
+    }
+
+    private void levelUp() {
+        if (stages.isEmpty()) return;
+        stage++;
+        stage = stage % stages.size();
+    }
+
+    public void clicked(int id) {
+        int rows = tiles.length;
+        int cols = (rows == 0) ? 0 : tiles[0].length;
+        if (cols == 0) return;
+
+        int row = id / cols;
+        int col = id % cols;
+
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int r = row + dr;
+                int c = col + dc;
+                if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                    toggleTile(r, c);
+                }
+            }
+        }
+    }
+
+    public boolean checkWin() {
+        for (boolean[] b1 : tiles) {
+            for (boolean b2 : b1) {
+                if (!b2) return false;
+            }
+        }
+        return true;
+    }
 }
