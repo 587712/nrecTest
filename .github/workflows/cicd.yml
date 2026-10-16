@@ -18,10 +18,10 @@ jobs:
           cache: maven
           
       - name: Give execute permission to mvnw
-        run: chmod +x ./LightsOut-1/mvnw
+        run: chmod +x mvnw
         
       - name: Compile with Maven
-        run: ./LightsOut-1/mvnw clean compile
+        run: ./mvnw clean compile
   
   test:
     runs-on: ubuntu-latest
@@ -37,10 +37,10 @@ jobs:
           cache: maven
           
       - name: Give execute permission to mvnw
-        run: chmod +x ./LightsOut-1/mvnw
+        run: chmod +x mvnw
         
       - name: Run Unit Tests
-        run: ./LightsOut-1/mvnw clean test      
+        run: ./mvnw clean test      
   
   build:
     runs-on: ubuntu-latest
@@ -56,10 +56,10 @@ jobs:
           cache: maven
           
       - name: Give execute permission to mvnw
-        run: chmod +x ./LightsOut-1/mvnw
+        run: chmod +x mvnw
         
       - name: Build Project [jar package]
-        run: ./LightsOut-1/mvnw clean package
+        run: ./mvnw clean package
         
       - name: Upload build folder
         uses: actions/upload-artifact@v4
