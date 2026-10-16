@@ -18,10 +18,10 @@ jobs:
           cache: maven
           
       - name: Give execute permission to mvnw
-        run: chmod +x mvnw
+        run: chmod +x ./LightsOut-1/mvnw
         
       - name: Compile with Maven
-        run: ./mvnw clean compile
+        run: ./LightsOut-1/mvnw clean compile
   
   test:
     runs-on: ubuntu-latest
